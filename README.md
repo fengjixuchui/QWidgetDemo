@@ -1,4 +1,4 @@
-﻿#### 目录说明
+﻿#### 一、目录说明
 | 编号 | 文件夹 | 描述 |
 | ------ | ------ | ------ |
 | 1 | lightbutton | 高亮按钮控件 |
@@ -34,7 +34,14 @@
 | 31 | screenwidget | 屏幕截图控件 |
 | 32 | echartgauge | echart仪表盘含交互支持webkit及webengine |
 | 33 | imageswitch | 图片开关控件 |
+| 34 | ffmpegdemo | 视频流播放ffmpeg内核 |
+| 35 | vlcdemo | 视频流播放vlc内核 |
 
+### 二、学习群
+1. **Qt交流大会群 853086607(雨田哥)**
+2. **Qt技术交流群 46679801(3000人群)**
+
+### 三、效果图
 ![avatar](https://github.com/feiyangqingyun/QWidgetDemo/raw/master/snap/lightbutton.gif)
 ![avatar](https://github.com/feiyangqingyun/QWidgetDemo/raw/master/snap/movewidget.gif)
 ![avatar](https://github.com/feiyangqingyun/QWidgetDemo/raw/master/snap/flatui.gif)
@@ -68,3 +75,5 @@
 ![avatar](https://github.com/feiyangqingyun/QWidgetDemo/raw/master/snap/screenwidget.gif)
 ![avatar](https://github.com/feiyangqingyun/QWidgetDemo/raw/master/snap/echartgauge.gif)
 ![avatar](https://github.com/feiyangqingyun/QWidgetDemo/raw/master/snap/imageswitch.gif)
+![avatar](https://github.com/feiyangqingyun/QWidgetDemo/raw/master/snap/ffmpegdemo.png)
+![avatar](https://github.com/feiyangqingyun/QWidgetDemo/raw/master/snap/vlcdemo.png)
