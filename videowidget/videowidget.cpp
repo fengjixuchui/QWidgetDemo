@@ -20,12 +20,59 @@ VideoWidget::VideoWidget(QWidget *parent) : QWidget(parent)
     //设置支持拖放
     setAcceptDrops(true);
 
+    //定时器校验视频
     timerCheck = new QTimer(this);
     timerCheck->setInterval(10 * 1000);
     connect(timerCheck, SIGNAL(timeout()), this, SLOT(checkVideo()));
 
     image = QImage();
+    copyImage = false;
+    checkLive = true;
+    drawImage = true;
+    fillImage = true;
 
+    flowEnable = false;
+    flowBgColor = "#000000";
+    flowPressColor = "#5EC7D9";
+
+    timeout = 20;
+    borderWidth = 5;
+    borderColor = "#000000";
+    focusColor = "#22A3A9";
+    bgText = "实时视频";
+    bgImage = QImage();
+
+    osd1Visible = false;
+    osd1FontSize = 12;
+    osd1Text = "时间";
+    osd1Color = "#FF0000";
+    osd1Image = QImage();
+    osd1Format = OSDFormat_DateTime;
+    osd1Position = OSDPosition_Right_Top;
+
+    osd2Visible = false;
+    osd2FontSize = 12;
+    osd2Text = "通道名称";
+    osd2Color = "#FF0000";
+    osd2Image = QImage();
+    osd2Format = OSDFormat_Text;
+    osd2Position = OSDPosition_Left_Bottom;
+
+    //初始化解码线程
+    this->initThread();
+    //初始化悬浮条
+    this->initFlowPanel();
+    //初始化悬浮条样式
+    this->initFlowStyle();
+}
+
+void VideoWidget::initThread()
+{
+
+}
+
+void VideoWidget::initFlowPanel()
+{
     //顶部工具栏,默认隐藏,鼠标移入显示移除隐藏
     flowPanel = new QWidget(this);
     flowPanel->setObjectName("flowPanel");
@@ -101,40 +148,17 @@ VideoWidget::VideoWidget(QWidget *parent) : QWidget(parent)
         //将按钮加到布局中
         layout->addWidget(btn);
     }
+}
 
-    copyImage = false;
-    checkLive = true;
-    drawImage = true;
-    fillImage = true;
-
-    flowEnable = false;
-    flowBgColor = "#000000";
-    flowPressColor = "#5EC7D9";
-
-    timeout = 20;
-    borderWidth = 5;
-    borderColor = "#000000";
-    focusColor = "#22A3A9";
-    bgText = "实时视频";
-    bgImage = QImage();
-
-    osd1Visible = false;
-    osd1FontSize = 12;
-    osd1Text = "时间";
-    osd1Color = "#FF0000";
-    osd1Image = QImage();
-    osd1Format = OSDFormat_DateTime;
-    osd1Position = OSDPosition_Right_Top;
-
-    osd2Visible = false;
-    osd2FontSize = 12;
-    osd2Text = "通道名称";
-    osd2Color = "#FF0000";
-    osd2Image = QImage();
-    osd2Format = OSDFormat_Text;
-    osd2Position = OSDPosition_Left_Bottom;
-
-    this->initFlowStyle();
+void VideoWidget::initFlowStyle()
+{
+    //设置样式以便区分,可以自行更改样式,也可以不用样式
+    QStringList qss;
+    QString rgba = QString("rgba(%1,%2,%3,150)").arg(flowBgColor.red()).arg(flowBgColor.green()).arg(flowBgColor.blue());
+    qss.append(QString("#flowPanel{background:%1;border:none;}").arg(rgba));
+    qss.append(QString("QPushButton{border:none;padding:0px;background:rgba(0,0,0,0);}"));
+    qss.append(QString("QPushButton:pressed{color:%1;}").arg(flowPressColor.name()));
+    flowPanel->setStyleSheet(qss.join(""));
 }
 
 VideoWidget::~VideoWidget()
@@ -174,7 +198,7 @@ void VideoWidget::dropEvent(QDropEvent *event)
 {
     //拖放完毕鼠标松开的时候执行
     //判断拖放进来的类型,取出文件,进行播放
-    if(event->mimeData()->hasUrls()) {
+    if (event->mimeData()->hasUrls()) {
         QString url = event->mimeData()->urls().first().toLocalFile();
         this->close();
         this->setUrl(url);
@@ -195,10 +219,10 @@ void VideoWidget::dropEvent(QDropEvent *event)
 void VideoWidget::dragEnterEvent(QDragEnterEvent *event)
 {
     //拖曳进来的时候先判断下类型,非法类型则不处理
-    if(event->mimeData()->hasFormat("application/x-qabstractitemmodeldatalist")) {
+    if (event->mimeData()->hasFormat("application/x-qabstractitemmodeldatalist")) {
         event->setDropAction(Qt::CopyAction);
         event->accept();
-    } else if(event->mimeData()->hasFormat("text/uri-list")) {
+    } else if (event->mimeData()->hasFormat("text/uri-list")) {
         event->setDropAction(Qt::LinkAction);
         event->accept();
     } else {
@@ -219,20 +243,12 @@ void VideoWidget::paintEvent(QPaintEvent *)
 
     //绘制边框
     drawBorder(&painter);
-
     if (!image.isNull()) {
         //绘制背景图片
         drawImg(&painter, image);
-
-        //绘制标签1
-        if (osd1Visible) {
-            drawOSD(&painter, osd1FontSize, osd1Text, osd1Color, osd1Image, osd1Format, osd1Position);
-        }
-
-        //绘制标签2
-        if (osd2Visible) {
-            drawOSD(&painter, osd2FontSize, osd2Text, osd2Color, osd2Image, osd2Format, osd2Position);
-        }
+        //绘制标签
+        drawOSD(&painter, osd1Visible, osd1FontSize, osd1Text, osd1Color, osd1Image, osd1Format, osd1Position);
+        drawOSD(&painter, osd2Visible, osd2FontSize, osd2Text, osd2Color, osd2Image, osd2Format, osd2Position);
     } else {
         //绘制背景
         drawBg(&painter);
@@ -241,6 +257,10 @@ void VideoWidget::paintEvent(QPaintEvent *)
 
 void VideoWidget::drawBorder(QPainter *painter)
 {
+    if (borderWidth == 0) {
+        return;
+    }
+
     painter->save();
     QPen pen;
     pen.setWidth(borderWidth);
@@ -290,6 +310,7 @@ void VideoWidget::drawImg(QPainter *painter, QImage img)
 }
 
 void VideoWidget::drawOSD(QPainter *painter,
+                          bool osdVisible,
                           int osdFontSize,
                           const QString &osdText,
                           const QColor &osdColor,
@@ -297,6 +318,10 @@ void VideoWidget::drawOSD(QPainter *painter,
                           const VideoWidget::OSDFormat &osdFormat,
                           const VideoWidget::OSDPosition &osdPosition)
 {
+    if (!osdVisible) {
+        return;
+    }
+
     painter->save();
 
     //标签位置尽量偏移多一点避免遮挡
@@ -501,17 +526,6 @@ QSize VideoWidget::sizeHint() const
 QSize VideoWidget::minimumSizeHint() const
 {
     return QSize(50, 35);
-}
-
-void VideoWidget::initFlowStyle()
-{
-    //设置样式以便区分,可以自行更改样式,也可以不用样式
-    QStringList qss;
-    QString rgba = QString("rgba(%1,%2,%3,150)").arg(flowBgColor.red()).arg(flowBgColor.green()).arg(flowBgColor.blue());
-    qss.append(QString("#flowPanel{background:%1;border:none;}").arg(rgba));
-    qss.append(QString("QPushButton{border:none;padding:0px;background:rgba(0,0,0,0);}"));
-    qss.append(QString("QPushButton:pressed{color:%1;}").arg(flowPressColor.name()));
-    flowPanel->setStyleSheet(qss.join(""));
 }
 
 void VideoWidget::updateImage(const QImage &image)
