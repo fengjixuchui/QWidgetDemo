@@ -7,7 +7,6 @@
 #endif
 
 #include "vlchead.h"
-class VlcWidget;
 
 class VlcThread : public QThread
 {
@@ -23,7 +22,6 @@ private:
     volatile bool isPlay;               //播放视频标志位
 
     QString url;                        //视频流地址
-
     libvlc_instance_t *vlcInst;         //载体对象
     libvlc_media_t *vlcMedia;           //媒体对象
     libvlc_media_player_t *vlcPlayer;   //播放对象   
@@ -60,7 +58,7 @@ public:
     ~VlcWidget();
 
 private:
-    VlcThread *vlc;                 //实时视频采集对象    
+    VlcThread *thread;
 
 public slots:    
     //设置视频流地址

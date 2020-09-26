@@ -1,9 +1,5 @@
 ﻿#include "ffmpeg.h"
 
-#pragma execution_character_set("utf-8")
-#define TIMEMS      qPrintable(QTime::currentTime().toString("HH:mm:ss zzz"))
-#define STRDATETIME qPrintable(QDateTime::currentDateTime().toString("yyyy-MM-dd-HH-mm-ss"))
-
 FFmpegThread::FFmpegThread(QObject *parent) : QThread(parent)
 {
     setObjectName("FFmpegThread");
@@ -235,8 +231,6 @@ bool FFmpegThread::init()
 
 void FFmpegThread::run()
 {
-    //计时
-    QTime time;
     while (!stopped) {
         //根据标志位执行初始化操作
         if (isPlay) {
@@ -245,16 +239,26 @@ void FFmpegThread::run()
             continue;
         }
 
-        time.restart();
         if (av_read_frame(avFormatContext, avPacket) >= 0) {
             //判断当前包是视频还是音频
-            int packetSize = avPacket->size;
             int index = avPacket->stream_index;
             if (index == videoStreamIndex) {
-                //解码视频流
+                //解码视频流 avcodec_decode_video2 方法已被废弃
+#if 0
                 avcodec_decode_video2(videoCodec, avFrame2, &frameFinish, avPacket);
+#else
+                frameFinish = avcodec_send_packet(videoCodec, avPacket);
+                if (frameFinish < 0) {
+                    continue;
+                }
 
-                if (frameFinish) {
+                frameFinish = avcodec_receive_frame(videoCodec, avFrame2);
+                if (frameFinish < 0) {
+                    continue;
+                }
+#endif
+
+                if (frameFinish >= 0) {
                     //将数据转成一张图片
                     sws_scale(swsContext, (const uint8_t *const *)avFrame2->data, avFrame2->linesize, 0, videoHeight, avFrame3->data, avFrame3->linesize);
 
@@ -358,11 +362,11 @@ void FFmpegThread::stop()
 }
 
 //实时视频显示窗体类
-FFmpegWidget::FFmpegWidget(QWidget * parent) : QWidget(parent)
+FFmpegWidget::FFmpegWidget(QWidget *parent) : QWidget(parent)
 {
-    ffmpeg = new FFmpegThread(this);
-    connect(ffmpeg, SIGNAL(receiveImage(QImage)), this, SLOT(updateImage(QImage)));   
-    image = QImage();  
+    thread = new FFmpegThread(this);
+    connect(thread, SIGNAL(receiveImage(QImage)), this, SLOT(updateImage(QImage)));
+    image = QImage();
 }
 
 FFmpegWidget::~FFmpegWidget()
@@ -390,7 +394,7 @@ void FFmpegWidget::updateImage(const QImage &image)
 
 void FFmpegWidget::setUrl(const QString &url)
 {
-    ffmpeg->setUrl(url);
+    thread->setUrl(url);
 }
 
 void FFmpegWidget::open()
@@ -398,27 +402,27 @@ void FFmpegWidget::open()
     //qDebug() << TIMEMS << "open video" << objectName();
     clear();
 
-    ffmpeg->play();
-    ffmpeg->start();
+    thread->play();
+    thread->start();
 }
 
 void FFmpegWidget::pause()
 {
-    ffmpeg->pause();
+    thread->pause();
 }
 
 void FFmpegWidget::next()
 {
-    ffmpeg->next();
+    thread->next();
 }
 
 void FFmpegWidget::close()
 {
     //qDebug() << TIMEMS << "close video" << objectName();
-    if (ffmpeg->isRunning()) {
-        ffmpeg->stop();
-        ffmpeg->quit();
-        ffmpeg->wait(500);
+    if (thread->isRunning()) {
+        thread->stop();
+        thread->quit();
+        thread->wait(500);
     }
 
     QTimer::singleShot(1, this, SLOT(clear()));

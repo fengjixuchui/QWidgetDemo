@@ -276,13 +276,14 @@ void VideoWidget::drawBg(QPainter *painter)
 
     //背景图片为空则绘制文字,否则绘制背景图片
     if (bgImage.isNull()) {
+        painter->setFont(this->font());
         painter->setPen(palette().foreground().color());
         painter->drawText(rect(), Qt::AlignCenter, bgText);
     } else {
         //居中绘制
-        int pixX = rect().center().x() - bgImage.width() / 2;
-        int pixY = rect().center().y() - bgImage.height() / 2;
-        QPoint point(pixX, pixY);
+        int x = rect().center().x() - bgImage.width() / 2;
+        int y = rect().center().y() - bgImage.height() / 2;
+        QPoint point(x, y);
         painter->drawImage(point, bgImage);
     }
 
@@ -300,9 +301,9 @@ void VideoWidget::drawImg(QPainter *painter, QImage img)
     } else {
         //按照比例自动居中绘制
         img = img.scaled(width() - offset, height() - offset, Qt::KeepAspectRatio);
-        int pixX = rect().center().x() - img.width() / 2;
-        int pixY = rect().center().y() - img.height() / 2;
-        QPoint point(pixX, pixY);
+        int x = rect().center().x() - img.width() / 2;
+        int y = rect().center().y() - img.height() / 2;
+        QPoint point(x, y);
         painter->drawImage(point, img);
     }
 
